@@ -1,0 +1,23 @@
+schema: spec-driven
+
+context: |
+  Project: Pokemon Dex - A modern, searchable Pokemon encyclopedia website
+  
+  Tech stack:
+    - Next.js 16 (App Router)
+    - React 19
+    - TypeScript 5
+    - Tailwind CSS 4
+    - ESLint 9
+  
+  Domain: Pokemon database/encyclopedia
+    - Data source: PokeAPI (https://pokeapi.co/)
+    - Features: Browse and search Pokemon, view detailed stats, types, abilities, evolutions
+    - Modern UI with responsive design
+    - Fast search and filtering capabilities
+  
+  Conventions:
+    - Use Next.js App Router conventions
+    - Server Components by default, Client Components only when needed
+    - Tailwind CSS for all styling
+    - TypeScript strict mode
