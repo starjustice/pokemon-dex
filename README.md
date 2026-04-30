@@ -7,6 +7,18 @@ A modern, interactive Pokemon encyclopedia built with Next.js. Browse, search, a
 ![TypeScript](https://img.shields.io/badge/TypeScript-5-blue)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4-38bdf8)
 
+## Screenshots
+
+### Home Page
+| Light Mode | Dark Mode |
+|:---:|:---:|
+| ![Home Light](public/screenshots/home-light.png) | ![Home Dark](public/screenshots/home-dark.png) |
+
+### Detail Page
+| Light Mode | Dark Mode |
+|:---:|:---:|
+| ![Detail Light](public/screenshots/detail-light.png) | ![Detail Dark](public/screenshots/detail-dark.png) |
+
 ## Features
 
 - **Pokemon Card Grid** — Browse all 1025 Pokemon in a responsive card layout with official artwork, type badges, abilities, and generation info
