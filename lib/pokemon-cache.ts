@@ -8,6 +8,7 @@ interface PokemonListCache {
   search: string;
   selectedTypes: string[];
   selectedGeneration: string;
+  hasMega: boolean;
 }
 
 let cache: PokemonListCache | null = null;
@@ -28,6 +29,7 @@ export function setCache(partial: Partial<PokemonListCache>): void {
       search: "",
       selectedTypes: [],
       selectedGeneration: "",
+      hasMega: false,
       ...partial,
     };
   }

@@ -10,6 +10,11 @@ import EvolutionChain from "@/components/EvolutionChain";
 import AbilityList from "@/components/AbilityList";
 import EncounterList from "@/components/EncounterList";
 import SiteHeader from "@/components/SiteHeader";
+import CryButton from "@/components/CryButton";
+import DexVoice from "@/components/DexVoice";
+import MegaEvolution from "@/components/MegaEvolution";
+import ShinyComparison from "@/components/ShinyComparison";
+import DynamaxSection from "@/components/DynamaxSection";
 
 function formatName(name: string): string {
   return name
@@ -76,7 +81,10 @@ export default async function PokemonDetailPage({
         <SiteHeader backHref="/" backLabel="Back to Pokédex" />
 
         {/* Hero section */}
-        <div className="mb-8 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-900">
+        <div
+          className="mb-8 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-900 animate-slideUp"
+          style={{ animationDelay: "0ms" }}
+        >
           <div className="flex flex-col items-center gap-6 sm:flex-row">
             {/* Image */}
             <div className="flex flex-col items-center gap-3 shrink-0">
@@ -111,12 +119,13 @@ export default async function PokemonDetailPage({
 
               {/* Types */}
               <div className="mt-3 flex flex-wrap justify-center gap-2 sm:justify-start">
-                {pokemon.types.map((type) => {
+                {pokemon.types.map((type, i) => {
                   const colors = TYPE_COLORS[type.name] ?? { bg: "bg-gray-400", text: "text-white" };
                   return (
                     <span
                       key={type.name}
-                      className={`${colors.bg} ${colors.text} rounded-full px-3 py-1 text-sm font-semibold capitalize`}
+                      className={`${colors.bg} ${colors.text} rounded-full px-3 py-1 text-sm font-semibold capitalize animate-popIn`}
+                      style={{ animationDelay: `${80 + i * 80}ms` }}
                     >
                       {type.name}
                     </span>
@@ -152,6 +161,12 @@ export default async function PokemonDetailPage({
                 </div>
               </div>
 
+              {/* Audio controls */}
+              <div className="mt-4 flex justify-center gap-2 sm:justify-start">
+                <CryButton cryUrl={pokemon.cryUrl} cryLegacyUrl={pokemon.cryLegacyUrl} />
+                <DexVoice name={pokemon.name} genus={pokemon.genus} flavorText={pokemon.flavorText} />
+              </div>
+
               {/* Flavor text */}
               {pokemon.flavorText && (
                 <p className="mt-4 text-sm italic text-gray-600 dark:text-gray-400">
@@ -163,13 +178,16 @@ export default async function PokemonDetailPage({
         </div>
 
         {/* Stats */}
-        <div className="mb-8 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-900">
+        <div
+          className="mb-8 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-900 animate-slideUp"
+          style={{ animationDelay: "100ms" }}
+        >
           <h2 className="mb-4 text-lg font-bold text-gray-900 dark:text-white">
             Base Stats
           </h2>
           <div className="space-y-3">
-            {pokemon.stats.map((stat) => (
-              <StatBar key={stat.name} stat={stat} />
+            {pokemon.stats.map((stat, i) => (
+              <StatBar key={stat.name} stat={stat} index={i} />
             ))}
           </div>
           <div className="mt-3 border-t border-gray-100 pt-3 dark:border-gray-800">
@@ -184,18 +202,71 @@ export default async function PokemonDetailPage({
           </div>
         </div>
 
+        {/* Shiny Form */}
+        {pokemon.shinyImage && (
+          <div
+            className="mb-8 rounded-2xl border border-yellow-200/60 bg-white p-6 shadow-sm dark:border-yellow-700/30 dark:bg-gray-900 animate-slideUp"
+            style={{ animationDelay: "200ms" }}
+          >
+            <ShinyComparison
+              name={pokemon.name}
+              normalImage={pokemon.image}
+              shinyImage={pokemon.shinyImage}
+            />
+          </div>
+        )}
+
         {/* Evolution Chain */}
-        <div className="mb-8 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-900">
+        <div
+          className="mb-8 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-900 animate-slideUp"
+          style={{ animationDelay: "300ms" }}
+        >
           <EvolutionChain chain={pokemon.evolutionChain} />
         </div>
 
+        {/* Mega Evolution */}
+        {pokemon.megaEvolutions.length > 0 && (
+          <div
+            className="mb-8 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-900 animate-slideUp"
+            style={{ animationDelay: "400ms" }}
+          >
+            <MegaEvolution
+              baseName={pokemon.name}
+              baseImage={pokemon.image}
+              baseTypes={pokemon.types}
+              megaEvolutions={pokemon.megaEvolutions}
+            />
+          </div>
+        )}
+
+        {/* Dynamax / Gigantamax */}
+        <div
+          className="mb-8 rounded-2xl border border-red-200/60 bg-white p-6 shadow-sm dark:border-red-800/30 dark:bg-gray-900 animate-slideUp"
+          style={{ animationDelay: "450ms" }}
+        >
+          <DynamaxSection
+            name={pokemon.name}
+            types={pokemon.types}
+            canGmax={pokemon.canGmax}
+            gmaxImage={pokemon.gmaxImage}
+            baseImage={pokemon.image}
+            gmaxMove={pokemon.gmaxMove}
+          />
+        </div>
+
         {/* Abilities */}
-        <div className="mb-8 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-900">
+        <div
+          className="mb-8 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-900 animate-slideUp"
+          style={{ animationDelay: "500ms" }}
+        >
           <AbilityList abilities={pokemon.abilityDetails} />
         </div>
 
         {/* Encounters */}
-        <div className="mb-8 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-900">
+        <div
+          className="mb-8 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-900 animate-slideUp"
+          style={{ animationDelay: "600ms" }}
+        >
           <EncounterList encounters={pokemon.encounters} />
         </div>
       </div>

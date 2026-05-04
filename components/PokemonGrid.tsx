@@ -9,7 +9,7 @@ import {
   useEffect,
 } from "react";
 import type { Pokemon } from "@/lib/pokemon";
-import { PAGE_SIZE, TOTAL_POKEMON } from "@/lib/pokemon";
+import { PAGE_SIZE, TOTAL_POKEMON, fetchMegaForms } from "@/lib/pokemon";
 import { getCache, setCache } from "@/lib/pokemon-cache";
 import PokemonCard from "./PokemonCard";
 import PokemonGridSkeleton from "./PokemonGridSkeleton";
@@ -17,6 +17,20 @@ import SearchBar from "./SearchBar";
 import FilterPanel from "./FilterPanel";
 import ActiveFilterChips from "./ActiveFilterChips";
 import LoadMoreTrigger from "./LoadMoreTrigger";
+import { MEGA_IDS, MEGA_MAP } from "@/lib/mega-ids";
+
+/** Sort key: base Pokemon first by dex number, then megas after their base by form ID */
+function pokemonSortKey(p: Pokemon): number {
+  const baseId = p.basePokemonId ?? p.id;
+  // Base forms: baseId * 100000 + 0
+  // Mega forms: baseId * 100000 + 50000 + megaFormId
+  return baseId * 100000 + (p.isMega ? 50000 + p.id : 0);
+}
+
+/** Merge megas into an existing sorted array, maintaining sort order */
+function mergeWithMegas(base: Pokemon[], megas: Pokemon[]): Pokemon[] {
+  return [...base, ...megas].sort((a, b) => pokemonSortKey(a) - pokemonSortKey(b));
+}
 
 export default function PokemonGrid() {
   const cached = getCache();
@@ -38,6 +52,9 @@ export default function PokemonGrid() {
   );
   const [selectedGeneration, setSelectedGeneration] = useState<string>(
     cached?.selectedGeneration ?? ""
+  );
+  const [hasMega, setHasMega] = useState<boolean>(
+    cached?.hasMega ?? false
   );
   const [, startTransition] = useTransition();
 
@@ -104,8 +121,13 @@ export default function PokemonGrid() {
           })
           .sort((a, b) => a.id - b.id);
 
+        // Fetch mega forms for mega-capable Pokemon in this page
+        const megaBaseIds = pokemon.filter((p) => MEGA_IDS.has(p.id)).map((p) => p.id);
+        const megaForms = await fetchMegaForms(megaBaseIds);
+        const merged = mergeWithMegas(pokemon, megaForms);
+
         const newOffset = clampedResults.length;
-        setAllPokemon(pokemon);
+        setAllPokemon(merged);
         setNextOffset(newOffset);
         setHasMore(newOffset < TOTAL_POKEMON);
       } catch {
@@ -128,9 +150,10 @@ export default function PokemonGrid() {
         search,
         selectedTypes,
         selectedGeneration,
+        hasMega,
       });
     }
-  }, [allPokemon, nextOffset, hasMore, search, selectedTypes, selectedGeneration]);
+  }, [allPokemon, nextOffset, hasMore, search, selectedTypes, selectedGeneration, hasMega]);
 
   // Throttled scroll position save
   useEffect(() => {
@@ -222,9 +245,13 @@ export default function PokemonGrid() {
         })
         .sort((a, b) => a.id - b.id);
 
+      // Fetch mega forms for mega-capable Pokemon in this page
+      const megaBaseIds = newPokemon.filter((p) => MEGA_IDS.has(p.id)).map((p) => p.id);
+      const megaForms = await fetchMegaForms(megaBaseIds);
+
       const newOffset = nextOffset + clampedResults.length;
 
-      setAllPokemon((prev) => [...prev, ...newPokemon]);
+      setAllPokemon((prev) => mergeWithMegas([...prev, ...newPokemon], megaForms));
       setNextOffset(newOffset);
       setHasMore(newOffset < TOTAL_POKEMON);
     } catch {
@@ -305,11 +332,17 @@ export default function PokemonGrid() {
           });
 
         accumulated.push(...pagePokemon);
+
+        // Fetch mega forms for this batch
+        const megaBaseIds = pagePokemon.filter((p) => MEGA_IDS.has(p.id)).map((p) => p.id);
+        const megaForms = await fetchMegaForms(megaBaseIds);
+        accumulated.push(...megaForms);
+
         offset += limit;
       }
 
       setAllPokemon((prev) =>
-        [...prev, ...accumulated].sort((a, b) => a.id - b.id)
+        mergeWithMegas([...prev, ...accumulated], [])
       );
       setNextOffset(TOTAL_POKEMON);
       setHasMore(false);
@@ -365,11 +398,16 @@ export default function PokemonGrid() {
     startTransition(() => setSelectedGeneration(""));
   }, [startTransition]);
 
+  const handleHasMegaToggle = useCallback(() => {
+    startTransition(() => setHasMega((prev) => !prev));
+  }, [startTransition]);
+
   const handleClearAll = useCallback(() => {
     startTransition(() => {
       setSearch("");
       setSelectedTypes([]);
       setSelectedGeneration("");
+      setHasMega(false);
     });
   }, [startTransition]);
 
@@ -378,7 +416,7 @@ export default function PokemonGrid() {
     return allPokemon.filter((p) => {
       if (term) {
         const matchesName = p.name.toLowerCase().includes(term);
-        const matchesNumber = p.id.toString().includes(term);
+        const matchesNumber = (p.basePokemonId ?? p.id).toString().includes(term);
         if (!matchesName && !matchesNumber) return false;
       }
       if (selectedTypes.length > 0) {
@@ -388,12 +426,17 @@ export default function PokemonGrid() {
       if (selectedGeneration && p.generation !== selectedGeneration) {
         return false;
       }
+      if (hasMega) {
+        // Show mega-capable base Pokemon AND their mega forms
+        const baseId = p.basePokemonId ?? p.id;
+        if (!MEGA_IDS.has(baseId)) return false;
+      }
       return true;
     });
-  }, [allPokemon, search, selectedTypes, selectedGeneration]);
+  }, [allPokemon, search, selectedTypes, selectedGeneration, hasMega]);
 
   const hasActiveFilters =
-    search !== "" || selectedTypes.length > 0 || selectedGeneration !== "";
+    search !== "" || selectedTypes.length > 0 || selectedGeneration !== "" || hasMega;
 
   const allLoaded = !hasMore;
 
@@ -410,6 +453,8 @@ export default function PokemonGrid() {
         onTypeToggle={handleTypeToggle}
         selectedGeneration={selectedGeneration}
         onGenerationChange={handleGenerationChange}
+        hasMega={hasMega}
+        onHasMegaToggle={handleHasMegaToggle}
       />
 
       {hasActiveFilters && (
@@ -418,9 +463,11 @@ export default function PokemonGrid() {
             search={search}
             selectedTypes={selectedTypes}
             selectedGeneration={selectedGeneration}
+            hasMega={hasMega}
             onClearSearch={handleClearSearch}
             onRemoveType={handleRemoveType}
             onClearGeneration={handleClearGeneration}
+            onClearMega={() => startTransition(() => setHasMega(false))}
             onClearAll={handleClearAll}
           />
           <span className="shrink-0 text-sm text-gray-500 dark:text-gray-400">

@@ -1,7 +1,4 @@
-"use client";
-
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import ThemeToggle from "@/components/ThemeToggle";
 
 interface SiteHeaderProps {
@@ -11,22 +8,20 @@ interface SiteHeaderProps {
 }
 
 export default function SiteHeader({ subtitle, backHref, backLabel }: SiteHeaderProps) {
-  const router = useRouter();
-
   return (
     <header className="mb-8 flex items-start justify-between">
       <div>
         <div className="flex items-center gap-3">
           {backHref && (
-            <button
-              onClick={() => router.back()}
+            <Link
+              href={backHref}
               className="inline-flex items-center gap-1 text-sm font-medium text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
             >
               <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
               </svg>
               {backLabel ?? "Back"}
-            </button>
+            </Link>
           )}
         </div>
         <Link href="/" scroll={false} className="hover:opacity-80 transition-opacity">

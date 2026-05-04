@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { TYPE_COLORS, TYPE_CARD_GRADIENTS } from "@/lib/type-colors";
+import { MEGA_IDS } from "@/lib/mega-ids";
 import type { Pokemon } from "@/lib/pokemon";
 
 function formatNumber(id: number): string {
@@ -19,15 +20,31 @@ function formatName(name: string): string {
 export default function PokemonCard({ pokemon }: { pokemon: Pokemon }) {
   const primaryType = pokemon.types[0]?.name ?? "normal";
   const gradient = TYPE_CARD_GRADIENTS[primaryType] ?? "from-gray-200/20";
+  const isMega = pokemon.isMega === true;
+  const displayId = pokemon.basePokemonId ?? pokemon.id;
+  const href = isMega
+    ? `/pokemon/mega/${pokemon.megaName}`
+    : `/pokemon/${pokemon.id}`;
 
   return (
     <Link
-      href={`/pokemon/${pokemon.id}`}
-      className={`block group relative overflow-hidden rounded-2xl border border-gray-200 bg-gradient-to-br ${gradient} to-white shadow-sm transition-all duration-300 hover:shadow-lg hover:-translate-y-1 dark:border-gray-700 dark:to-gray-900`}
+      href={href}
+      className={`block group relative overflow-hidden rounded-2xl border bg-gradient-to-br ${gradient} to-white shadow-sm transition-all duration-300 hover:shadow-lg hover:-translate-y-1 dark:to-gray-900 ${
+        isMega
+          ? "border-purple-300 ring-2 ring-purple-400/60 bg-gradient-to-br from-purple-50 dark:border-purple-700 dark:ring-purple-500/40 dark:from-purple-950/30"
+          : "border-gray-200 dark:border-gray-700"
+      }`}
     >
+      {/* Mega badge */}
+      {(isMega || MEGA_IDS.has(pokemon.id)) && (
+        <span className="absolute top-3 left-3 bg-purple-500 text-white text-[10px] font-bold uppercase px-2 py-0.5 rounded-full tracking-wide">
+          Mega
+        </span>
+      )}
+
       {/* Number badge */}
       <span className="absolute top-3 right-3 text-sm font-mono font-bold text-gray-400 dark:text-gray-500">
-        {formatNumber(pokemon.id)}
+        {formatNumber(displayId)}
       </span>
 
       {/* Image */}

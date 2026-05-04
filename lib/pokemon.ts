@@ -1,3 +1,6 @@
+import { MEGA_MAP } from "@/lib/mega-ids";
+import { GMAX_MAP, GMAX_MOVES, type GMaxMove } from "@/lib/gmax-ids";
+
 export interface PokemonType {
   name: string;
   slot: number;
@@ -16,6 +19,12 @@ export interface Pokemon {
   generation: string;
   image: string;
   fallbackImage: string;
+  /** True if this is a mega evolution form */
+  isMega?: boolean;
+  /** National dex ID of the base form (for sorting megas after their base) */
+  basePokemonId?: number;
+  /** PokeAPI name of the mega form (e.g. "charizard-mega-x") used in URL routing */
+  megaName?: string;
 }
 
 export interface PokemonPage {
@@ -88,6 +97,49 @@ function parsePokemonResponse(data: PokeAPIPokemonResponse): Pokemon {
       data.sprites.front_default ??
       `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${id}.png`,
   };
+}
+
+/**
+ * Fetch mega evolution forms for the given base Pokemon IDs.
+ * Uses MEGA_MAP to look up mega form IDs, fetches them in parallel,
+ * and returns Pokemon objects with mega fields set.
+ * Failed fetches are silently skipped.
+ */
+export async function fetchMegaForms(baseIds: number[]): Promise<Pokemon[]> {
+  const megaFetches: { baseId: number; megaId: number }[] = [];
+  for (const baseId of baseIds) {
+    const megaIds = MEGA_MAP[baseId];
+    if (megaIds) {
+      for (const megaId of megaIds) {
+        megaFetches.push({ baseId, megaId });
+      }
+    }
+  }
+
+  if (megaFetches.length === 0) return [];
+
+  const results = await Promise.allSettled(
+    megaFetches.map(async ({ baseId, megaId }): Promise<Pokemon> => {
+      const res = await fetch(`${POKEAPI_BASE}/pokemon/${megaId}`);
+      if (!res.ok) throw new Error(`Failed to fetch mega ${megaId}`);
+      const data: PokeAPIPokemonResponse = await res.json();
+      const base = parsePokemonResponse(data);
+      return {
+        ...base,
+        // Override generation to match the base form (megas share their base's generation)
+        generation: getGeneration(baseId),
+        isMega: true,
+        basePokemonId: baseId,
+        megaName: data.name,
+      };
+    })
+  );
+
+  return results
+    .filter(
+      (r): r is PromiseFulfilledResult<Pokemon> => r.status === "fulfilled"
+    )
+    .map((r) => r.value);
 }
 
 export async function fetchPokemonPage(
@@ -187,11 +239,27 @@ export interface PokemonDetail {
   abilityDetails: AbilityDetail[];
   encounters: EncounterLocation[];
   animatedSprite: string;
+  shinyImage: string | null;
+  shinyBackImage: string | null;
+  shinyAnimatedSprite: string;
+  cryUrl: string | null;
+  cryLegacyUrl: string | null;
+  megaEvolutions: MegaEvolution[];
+  canGmax: boolean;
+  gmaxImage: string | null;
+  gmaxMove: GMaxMove | null;
 }
 
 export interface PokemonStat {
   name: string;
   value: number;
+}
+
+export interface MegaEvolution {
+  name: string;
+  image: string;
+  types: PokemonType[];
+  stats: PokemonStat[];
 }
 
 export interface EvolutionStage {
@@ -219,6 +287,7 @@ interface PokeAPISpeciesResponse {
   evolution_chain: { url: string };
   flavor_text_entries: { flavor_text: string; language: { name: string }; version: { name: string } }[];
   genera: { genus: string; language: { name: string } }[];
+  varieties: { is_default: boolean; pokemon: { name: string; url: string } }[];
 }
 
 interface PokeAPIEvolutionChain {
@@ -365,8 +434,12 @@ export async function fetchPokemonDetail(id: number): Promise<PokemonDetail> {
     ? await encountersRes.json()
     : [];
 
-  // Stage 2: evolution chain + ability details
-  const [evolutionChain, abilityDetails] = await Promise.all([
+  // Stage 2: evolution chain + ability details + mega evolutions
+  const megaVarieties = speciesData.varieties.filter(
+    (v) => !v.is_default && v.pokemon.name.includes("-mega")
+  );
+
+  const [evolutionChain, abilityDetails, ...megaResults] = await Promise.all([
     fetchEvolutionChain(speciesData.evolution_chain.url),
     fetchAbilityDetails(
       pokemonData.abilities.map(
@@ -377,7 +450,60 @@ export async function fetchPokemonDetail(id: number): Promise<PokemonDetail> {
         })
       )
     ),
+    ...megaVarieties.map(async (v): Promise<MegaEvolution | null> => {
+      try {
+        const res = await fetch(v.pokemon.url);
+        if (!res.ok) return null;
+        const data = await res.json();
+        const megaImage =
+          data.sprites?.other?.["official-artwork"]?.front_default ??
+          data.sprites?.front_default ??
+          "";
+        return {
+          name: data.name,
+          image: megaImage,
+          types: data.types.map(
+            (t: { slot: number; type: { name: string } }) => ({
+              name: t.type.name,
+              slot: t.slot,
+            })
+          ),
+          stats: data.stats.map(
+            (s: { stat: { name: string }; base_stat: number }) => ({
+              name: s.stat.name,
+              value: s.base_stat,
+            })
+          ),
+        };
+      } catch {
+        return null;
+      }
+    }),
   ]);
+
+  const megaEvolutions: MegaEvolution[] = megaResults.filter(
+    (m): m is MegaEvolution => m !== null
+  );
+
+  // G-Max lookup
+  const gmaxFormName = GMAX_MAP[id];
+  let gmaxImage: string | null = null;
+  if (gmaxFormName) {
+    try {
+      const gmaxRes = await fetch(`${POKEAPI_BASE}/pokemon/${gmaxFormName}`);
+      if (gmaxRes.ok) {
+        const gmaxData = await gmaxRes.json();
+        gmaxImage =
+          gmaxData.sprites?.other?.["official-artwork"]?.front_default ??
+          gmaxData.sprites?.front_default ??
+          null;
+      }
+    } catch {
+      // silently skip
+    }
+  }
+  const canGmax = !!gmaxFormName;
+  const gmaxMove = gmaxFormName ? (GMAX_MOVES[gmaxFormName] ?? null) : null;
 
   // Parse flavor text (most recent English)
   const flavorEntry = speciesData.flavor_text_entries
@@ -439,5 +565,120 @@ export async function fetchPokemonDetail(id: number): Promise<PokemonDetail> {
     abilityDetails,
     encounters,
     animatedSprite: `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/showdown/${id}.gif`,
+    shinyImage:
+      pokemonData.sprites.other["official-artwork"].front_shiny ??
+      pokemonData.sprites.front_shiny ??
+      null,
+    shinyBackImage: pokemonData.sprites.back_shiny ?? null,
+    shinyAnimatedSprite: `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/showdown/shiny/${id}.gif`,
+    cryUrl: pokemonData.cries?.latest ?? null,
+    cryLegacyUrl: pokemonData.cries?.legacy ?? null,
+    megaEvolutions,
+    canGmax,
+    gmaxImage,
+    gmaxMove,
+  };
+}
+
+/**
+ * Fetch full detail for a mega evolution form by its PokeAPI name
+ * (e.g. "charizard-mega-x"). Returns a PokemonDetail with the mega's
+ * own stats/types/abilities, plus species data (flavor text, genus,
+ * evolution chain) from the base species.
+ */
+export async function fetchMegaDetail(name: string): Promise<PokemonDetail> {
+  // Stage 1: fetch the mega form's pokemon data
+  const pokemonRes = await fetch(`${POKEAPI_BASE}/pokemon/${name}`);
+  if (!pokemonRes.ok) throw new Error(`Failed to fetch mega pokemon ${name}`);
+  const pokemonData = await pokemonRes.json();
+
+  // Derive base species ID from the pokemon's species URL
+  const speciesUrl: string = pokemonData.species?.url;
+  if (!speciesUrl) throw new Error(`No species URL for mega ${name}`);
+
+  // Stage 2: fetch species data for flavor text, genus, evolution chain
+  const speciesRes = await fetch(speciesUrl);
+  if (!speciesRes.ok) throw new Error(`Failed to fetch species for mega ${name}`);
+  const speciesData: PokeAPISpeciesResponse = await speciesRes.json();
+  const baseSpeciesId = getSpeciesId(speciesUrl);
+
+  // Stage 3: evolution chain + ability details (no encounters for megas)
+  const [evolutionChain, abilityDetails] = await Promise.all([
+    fetchEvolutionChain(speciesData.evolution_chain.url),
+    fetchAbilityDetails(
+      pokemonData.abilities.map(
+        (a: { ability: { name: string; url: string }; is_hidden: boolean }) => ({
+          name: a.ability.name,
+          isHidden: a.is_hidden,
+          url: a.ability.url,
+        })
+      )
+    ),
+  ]);
+
+  // Parse flavor text (most recent English) from species
+  const flavorEntry = speciesData.flavor_text_entries
+    .filter((e) => e.language.name === "en")
+    .pop();
+  const flavorText = flavorEntry
+    ? flavorEntry.flavor_text.replace(/[\n\f\r]/g, " ")
+    : "";
+
+  const genusEntry = speciesData.genera.find((g) => g.language.name === "en");
+  const genus = genusEntry?.genus ?? "";
+
+  const megaId = pokemonData.id;
+  const image =
+    pokemonData.sprites?.other?.["official-artwork"]?.front_default ??
+    pokemonData.sprites?.front_default ??
+    `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${megaId}.png`;
+
+  return {
+    id: megaId,
+    name: pokemonData.name,
+    types: pokemonData.types.map(
+      (t: { slot: number; type: { name: string } }) => ({
+        name: t.type.name,
+        slot: t.slot,
+      })
+    ),
+    abilities: pokemonData.abilities.map(
+      (a: { ability: { name: string }; is_hidden: boolean }) => ({
+        name: a.ability.name,
+        isHidden: a.is_hidden,
+      })
+    ),
+    stats: pokemonData.stats.map(
+      (s: { stat: { name: string }; base_stat: number }) => ({
+        name: s.stat.name,
+        value: s.base_stat,
+      })
+    ),
+    height: pokemonData.height,
+    weight: pokemonData.weight,
+    image,
+    fallbackImage:
+      pokemonData.sprites?.front_default ??
+      `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${megaId}.png`,
+    backImage: pokemonData.sprites?.back_default ?? null,
+    generation: getGeneration(baseSpeciesId),
+    flavorText,
+    genus,
+    evolutionChain,
+    abilityDetails,
+    encounters: [], // Mega forms don't have encounter data
+    animatedSprite: `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/showdown/${megaId}.gif`,
+    shinyImage:
+      pokemonData.sprites?.other?.["official-artwork"]?.front_shiny ??
+      pokemonData.sprites?.front_shiny ??
+      null,
+    shinyBackImage: pokemonData.sprites?.back_shiny ?? null,
+    shinyAnimatedSprite: `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/showdown/shiny/${megaId}.gif`,
+    cryUrl: pokemonData.cries?.latest ?? null,
+    cryLegacyUrl: pokemonData.cries?.legacy ?? null,
+    megaEvolutions: [], // Already on the mega page, no nested megas
+    canGmax: !!GMAX_MAP[baseSpeciesId],
+    gmaxImage: null, // Not fetched for mega detail pages
+    gmaxMove: GMAX_MAP[baseSpeciesId] ? (GMAX_MOVES[GMAX_MAP[baseSpeciesId]] ?? null) : null,
   };
 }

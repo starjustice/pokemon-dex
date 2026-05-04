@@ -9,14 +9,18 @@ export default function FilterPanel({
   onTypeToggle,
   selectedGeneration,
   onGenerationChange,
+  hasMega,
+  onHasMegaToggle,
 }: {
   selectedTypes: string[];
   onTypeToggle: (type: string) => void;
   selectedGeneration: string;
   onGenerationChange: (gen: string) => void;
+  hasMega: boolean;
+  onHasMegaToggle: () => void;
 }) {
   const [isOpen, setIsOpen] = useState(false);
-  const activeCount = selectedTypes.length + (selectedGeneration ? 1 : 0);
+  const activeCount = selectedTypes.length + (selectedGeneration ? 1 : 0) + (hasMega ? 1 : 0);
 
   return (
     <div className="space-y-3">
@@ -107,6 +111,23 @@ export default function FilterPanel({
               </option>
             ))}
           </select>
+        </div>
+
+        {/* Mega filter */}
+        <div className="flex items-center gap-3">
+          <label className="shrink-0 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+            Form
+          </label>
+          <button
+            onClick={onHasMegaToggle}
+            className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold uppercase tracking-wide transition-all duration-200 ${
+              hasMega
+                ? "bg-purple-500 text-white ring-2 ring-purple-300 ring-offset-2 dark:ring-offset-gray-900"
+                : "bg-gray-100 text-gray-600 hover:bg-purple-100 hover:text-purple-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-purple-900/30 dark:hover:text-purple-300"
+            }`}
+          >
+            ✦ Has Mega
+          </button>
         </div>
       </div>
     </div>

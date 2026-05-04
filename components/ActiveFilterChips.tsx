@@ -6,9 +6,11 @@ interface ActiveFilterChipsProps {
   search: string;
   selectedTypes: string[];
   selectedGeneration: string;
+  hasMega: boolean;
   onClearSearch: () => void;
   onRemoveType: (type: string) => void;
   onClearGeneration: () => void;
+  onClearMega: () => void;
   onClearAll: () => void;
 }
 
@@ -16,13 +18,15 @@ export default function ActiveFilterChips({
   search,
   selectedTypes,
   selectedGeneration,
+  hasMega,
   onClearSearch,
   onRemoveType,
   onClearGeneration,
+  onClearMega,
   onClearAll,
 }: ActiveFilterChipsProps) {
   const hasFilters =
-    search !== "" || selectedTypes.length > 0 || selectedGeneration !== "";
+    search !== "" || selectedTypes.length > 0 || selectedGeneration !== "" || hasMega;
 
   if (!hasFilters) return null;
 
@@ -49,6 +53,15 @@ export default function ActiveFilterChips({
       {/* Generation chip */}
       {selectedGeneration && (
         <Chip label={selectedGeneration} onRemove={onClearGeneration} />
+      )}
+
+      {/* Mega chip */}
+      {hasMega && (
+        <Chip
+          label="✦ Has Mega"
+          className="bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300"
+          onRemove={onClearMega}
+        />
       )}
 
       {/* Clear all button */}

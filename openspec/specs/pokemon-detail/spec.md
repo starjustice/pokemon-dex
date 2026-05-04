@@ -1,11 +1,11 @@
 ## ADDED Requirements
 
 ### Requirement: Pokemon detail page
-The system SHALL display a full detail page at `/pokemon/[id]` when a user navigates to it. The page SHALL be server-side rendered and show: official artwork (large), Pokemon name, Pokedex number, types, height, weight, base stats, flavor text, evolution chain, abilities with descriptions, and encounter locations.
+The system SHALL display a full detail page at `/pokemon/[id]` when a user navigates to it. The page SHALL be server-side rendered and show: official artwork (large), Pokemon name, Pokedex number, types, height, weight, base stats, flavor text, evolution chain, abilities with descriptions, encounter locations, cry audio button, dex voice button, and mega evolution section (when applicable).
 
 #### Scenario: Navigate to detail page
 - **WHEN** a user navigates to `/pokemon/25`
-- **THEN** the system displays Pikachu's full detail page with all sections populated
+- **THEN** the system displays Pikachu's full detail page with all sections populated, including cry and dex voice buttons
 
 #### Scenario: Back navigation
 - **WHEN** the user clicks the back button on the detail page
@@ -82,3 +82,25 @@ The system SHALL display a skeleton loading UI while the detail page data is bei
 #### Scenario: Loading skeleton shown
 - **WHEN** the user navigates to a detail page
 - **THEN** a skeleton placeholder is shown until data loads
+
+### Requirement: PokemonDetail includes shiny sprite URLs
+The `PokemonDetail` interface SHALL include `shinyImage: string | null`, `shinyBackImage: string | null`, and `shinyAnimatedSprite: string` fields extracted from the PokeAPI response. No additional API calls SHALL be made.
+
+#### Scenario: Shiny fields populated from PokeAPI
+- **WHEN** `fetchPokemonDetail` or `fetchMegaDetail` is called
+- **THEN** the returned `PokemonDetail` SHALL include `shinyImage` from `sprites.other['official-artwork'].front_shiny`, `shinyBackImage` from `sprites.back_shiny`, and `shinyAnimatedSprite` from the Showdown shiny GIF URL pattern
+
+#### Scenario: Shiny artwork not available
+- **WHEN** PokeAPI returns null for `front_shiny` artwork
+- **THEN** `shinyImage` SHALL be `null`
+
+### Requirement: Shiny comparison section on detail pages
+The detail page SHALL display a side-by-side shiny comparison section when shiny artwork is available, placed between the Stats and Evolution Chain sections. No interactive toggle is required — the comparison is static.
+
+#### Scenario: Shiny comparison shown
+- **WHEN** the detail page loads for a Pokemon with shiny artwork
+- **THEN** a section labeled "Shiny Form" is shown with the normal official artwork on the left and the shiny official artwork on the right, each with a label
+
+#### Scenario: Shiny comparison hidden
+- **WHEN** PokeAPI returns null for `front_shiny` artwork
+- **THEN** the shiny comparison section is NOT rendered
