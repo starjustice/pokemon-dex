@@ -46,41 +46,57 @@ The system SHALL provide a generation dropdown select to filter Pokemon by gener
 - **THEN** only Pokemon from Generation I (Kanto, #1-151) are displayed
 
 ### Requirement: Combined search and filters
-Search and filters SHALL work together using AND logic on the currently loaded Pokemon. A results count ("Showing X of Y loaded") SHALL be displayed when any filter is active. A "Clear all" button SHALL be styled as a visible button. When filters are active and not all Pokemon are loaded, a "Load all Pokemon for complete results" button SHALL be shown. Active filter chips SHALL animate in with a fade+scale entrance transition when added.
+Search and filters SHALL work together using AND logic across ALL Pokemon, not just currently loaded Pokemon. When any filter or search is activated, the system SHALL use PokeAPI endpoints to resolve the complete set of matching Pokemon IDs, then fetch details only for the visible page. Results SHALL be correct and complete from the first page displayed. There is no "Load all" button.
+
+#### Scenario: Type filter returns complete results immediately
+- **WHEN** the user selects "Fighting" type with only 40 Pokemon previously loaded
+- **THEN** the system SHALL fetch the complete Fighting-type Pokemon list from `/type/fighting`, then fetch details for the first 40 matching Pokemon, displaying correct results immediately
 
 #### Scenario: Search with active filter
 - **WHEN** the user has "Fire" type filter active and types "char" in search
-- **THEN** only Fire-type Pokemon whose names contain "char" from the currently loaded set are shown
+- **THEN** only Fire-type Pokemon whose names contain "char" are shown, with results complete from the first page
 
 #### Scenario: Results count displayed
 - **WHEN** any filter or search is active
-- **THEN** the system displays "Showing X of Y loaded Pokemon" with a styled "Clear all" button
+- **THEN** the system displays "Showing X of Y" where Y is the total number of matching Pokemon (not just loaded Pokemon)
 
-#### Scenario: Load all for complete search
-- **WHEN** filters are active and not all Pokemon are loaded
-- **THEN** a "Load all Pokemon for complete results" button is shown, which triggers loading all remaining Pokemon
+#### Scenario: Infinite scroll through filtered results
+- **WHEN** the user scrolls to the bottom of filtered results and more matching Pokemon exist beyond the current page
+- **THEN** the system SHALL fetch details for the next page of filtered Pokemon IDs and append them to the grid
+
+#### Scenario: Filter cleared returns to normal pagination
+- **WHEN** the user clears all filters
+- **THEN** the grid returns to standard sequential pagination from where it left off
 
 #### Scenario: Filter chip entrance animation
 - **WHEN** a new filter chip appears (type selected, generation chosen, or search entered)
 - **THEN** the chip animates in with a fade and scale transition
 
 ### Requirement: No results empty state
-The system SHALL display a "No Pokemon found" message with a "Clear all filters" button when the combination of search and filters returns zero results.
+The system SHALL display a "No Pokemon found" message with a "Clear all filters" button when the API-resolved filtered set contains zero results. A loading state SHALL be shown while the filter resolution is in progress.
 
 #### Scenario: Empty state display
-- **WHEN** the active filters and search produce zero results
+- **WHEN** the API-resolved filtered set contains zero Pokemon
 - **THEN** a centered empty state is shown with a sad face, "No Pokemon found" heading, helpful message, and a "Clear all filters" button
 
+#### Scenario: Loading state during filter resolution
+- **WHEN** the user activates a filter and the system is fetching the filtered ID list from PokeAPI
+- **THEN** a loading indicator is shown in the grid area
+
 ### Requirement: Filter controls layout
-The search bar SHALL be placed full-width on its own row. The filter controls (type toggles and generation dropdown) SHALL be on a separate row below the search bar, with section labels ("Filter by Type", "Generation"). On mobile, the filter section SHALL be collapsible. Active filter chips SHALL appear between filters and the grid.
+On mobile (< `lg`), the inline search bar and filter panel SHALL be hidden. Instead, filters are accessed via the floating action button and bottom sheet. On desktop (`lg+`), the search bar and filter panel remain inline above the grid as before. Active filter chips SHALL still appear inline between filters and grid on all screen sizes.
 
-#### Scenario: Controls visibility
-- **WHEN** the user views the Pokemon list page
-- **THEN** the search bar is full-width on its own row, and filter controls are on a separate row below it, with no overlap
+#### Scenario: Mobile hides inline filters
+- **WHEN** the user views the home page on mobile (< lg)
+- **THEN** the inline SearchBar and FilterPanel are hidden, replaced by the FAB + bottom sheet
 
-#### Scenario: Section labels displayed
-- **WHEN** the filter panel is visible
-- **THEN** the type filter section has a "Filter by Type" label and the generation section has a "Generation" label
+#### Scenario: Desktop shows inline filters
+- **WHEN** the user views the home page on desktop (lg+)
+- **THEN** the inline SearchBar and FilterPanel are visible as before
+
+#### Scenario: Active filter chips visible on mobile
+- **WHEN** the user has active filters on mobile
+- **THEN** active filter chips are displayed inline above the grid (dismissible)
 
 ### Requirement: Active filter chips
 The system SHALL display a row of dismissible filter chips between the filter controls and the card grid when any filter is active. Each chip SHALL show the filter value (e.g. "Fire", "Gen I", or the search term) with an "x" dismiss button to remove that individual filter.

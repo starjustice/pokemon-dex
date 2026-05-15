@@ -67,9 +67,9 @@ export default function PokemonCard({ pokemon }: { pokemon: Pokemon }) {
       </div>
 
       {/* Info */}
-      <div className="px-4 pb-4 space-y-2">
+      <div className="px-4 pb-4 sm:px-4 sm:pb-4 space-y-2">
         {/* Name */}
-        <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 truncate">
+        <h3 className="text-base font-bold text-gray-900 dark:text-gray-100 truncate sm:text-lg">
           {formatName(pokemon.name)}
         </h3>
 

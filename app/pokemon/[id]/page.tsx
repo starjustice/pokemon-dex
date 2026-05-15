@@ -77,12 +77,12 @@ export default async function PokemonDetailPage({
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
-      <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-4xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
         <SiteHeader backHref="/" backLabel="Back to Pokédex" />
 
         {/* Hero section */}
         <div
-          className="mb-8 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-900 animate-slideUp"
+          className="mb-8 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6 dark:border-gray-700 dark:bg-gray-900 animate-slideUp"
           style={{ animationDelay: "0ms" }}
         >
           <div className="flex flex-col items-center gap-6 sm:flex-row">
@@ -169,7 +169,7 @@ export default async function PokemonDetailPage({
 
               {/* Flavor text */}
               {pokemon.flavorText && (
-                <p className="mt-4 text-sm italic text-gray-600 dark:text-gray-400">
+                <p className="mt-4 text-base italic text-gray-600 dark:text-gray-400 sm:text-sm">
                   &ldquo;{pokemon.flavorText}&rdquo;
                 </p>
               )}
@@ -179,10 +179,10 @@ export default async function PokemonDetailPage({
 
         {/* Stats */}
         <div
-          className="mb-8 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-900 animate-slideUp"
+          className="mb-8 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6 dark:border-gray-700 dark:bg-gray-900 animate-slideUp"
           style={{ animationDelay: "100ms" }}
         >
-          <h2 className="mb-4 text-lg font-bold text-gray-900 dark:text-white">
+          <h2 className="mb-4 text-lg font-bold text-gray-900 dark:text-white sm:text-xl">
             Base Stats
           </h2>
           <div className="space-y-3">
@@ -205,7 +205,7 @@ export default async function PokemonDetailPage({
         {/* Shiny Form */}
         {pokemon.shinyImage && (
           <div
-            className="mb-8 rounded-2xl border border-yellow-200/60 bg-white p-6 shadow-sm dark:border-yellow-700/30 dark:bg-gray-900 animate-slideUp"
+            className="mb-8 rounded-2xl border border-yellow-200/60 bg-white p-4 shadow-sm sm:p-6 dark:border-yellow-700/30 dark:bg-gray-900 animate-slideUp"
             style={{ animationDelay: "200ms" }}
           >
             <ShinyComparison
@@ -218,7 +218,7 @@ export default async function PokemonDetailPage({
 
         {/* Evolution Chain */}
         <div
-          className="mb-8 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-900 animate-slideUp"
+          className="mb-8 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6 dark:border-gray-700 dark:bg-gray-900 animate-slideUp"
           style={{ animationDelay: "300ms" }}
         >
           <EvolutionChain chain={pokemon.evolutionChain} />
@@ -227,7 +227,7 @@ export default async function PokemonDetailPage({
         {/* Mega Evolution */}
         {pokemon.megaEvolutions.length > 0 && (
           <div
-            className="mb-8 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-900 animate-slideUp"
+            className="mb-8 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6 dark:border-gray-700 dark:bg-gray-900 animate-slideUp"
             style={{ animationDelay: "400ms" }}
           >
             <MegaEvolution
@@ -241,7 +241,7 @@ export default async function PokemonDetailPage({
 
         {/* Dynamax / Gigantamax */}
         <div
-          className="mb-8 rounded-2xl border border-red-200/60 bg-white p-6 shadow-sm dark:border-red-800/30 dark:bg-gray-900 animate-slideUp"
+          className="mb-8 rounded-2xl border border-red-200/60 bg-white p-4 shadow-sm sm:p-6 dark:border-red-800/30 dark:bg-gray-900 animate-slideUp"
           style={{ animationDelay: "450ms" }}
         >
           <DynamaxSection
@@ -256,7 +256,7 @@ export default async function PokemonDetailPage({
 
         {/* Abilities */}
         <div
-          className="mb-8 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-900 animate-slideUp"
+          className="mb-8 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6 dark:border-gray-700 dark:bg-gray-900 animate-slideUp"
           style={{ animationDelay: "500ms" }}
         >
           <AbilityList abilities={pokemon.abilityDetails} />
@@ -264,7 +264,7 @@ export default async function PokemonDetailPage({
 
         {/* Encounters */}
         <div
-          className="mb-8 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-900 animate-slideUp"
+          className="mb-8 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6 dark:border-gray-700 dark:bg-gray-900 animate-slideUp"
           style={{ animationDelay: "600ms" }}
         >
           <EncounterList encounters={pokemon.encounters} />

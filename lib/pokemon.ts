@@ -58,6 +58,130 @@ const POKEAPI_BASE = "https://pokeapi.co/api/v2";
 export const PAGE_SIZE = 40;
 export const TOTAL_POKEMON = 1025;
 
+// Module-level caches for filtered queries
+let pokemonNameCache: { id: number; name: string }[] | null = null;
+const typeIdCache = new Map<string, number[]>();
+
+/**
+ * Fetch all Pokemon names (lightweight list, ~30KB).
+ * Cached after first call.
+ */
+export async function fetchAllPokemonNames(): Promise<{ id: number; name: string }[]> {
+  if (pokemonNameCache) return pokemonNameCache;
+  const res = await fetch(`${POKEAPI_BASE}/pokemon?limit=${TOTAL_POKEMON}`);
+  if (!res.ok) throw new Error("Failed to fetch Pokemon name list");
+  const data: PokeAPIListResponse = await res.json();
+  pokemonNameCache = data.results.map((r) => {
+    const parts = r.url.replace(/\/$/, "").split("/");
+    return { id: parseInt(parts[parts.length - 1], 10), name: r.name };
+  });
+  return pokemonNameCache;
+}
+
+/**
+ * Fetch all Pokemon IDs for a given type. Cached per type.
+ */
+export async function fetchPokemonIdsByType(type: string): Promise<number[]> {
+  if (typeIdCache.has(type)) return typeIdCache.get(type)!;
+  const res = await fetch(`${POKEAPI_BASE}/type/${type}`);
+  if (!res.ok) throw new Error(`Failed to fetch type ${type}`);
+  const data = await res.json();
+  const ids: number[] = data.pokemon
+    .map((entry: { pokemon: { name: string; url: string } }) => {
+      const parts = entry.pokemon.url.replace(/\/$/, "").split("/");
+      return parseInt(parts[parts.length - 1], 10);
+    })
+    .filter((id: number) => id <= TOTAL_POKEMON)
+    .sort((a: number, b: number) => a - b);
+  typeIdCache.set(type, ids);
+  return ids;
+}
+
+export interface FilterParams {
+  types: string[];
+  generation: string;
+  search: string;
+  hasMega: boolean;
+}
+
+/**
+ * Resolve the complete set of Pokemon IDs matching the given filters.
+ * Uses AND logic across filter categories, OR within types.
+ */
+export async function fetchFilteredPokemonIds(filters: FilterParams): Promise<number[]> {
+  const sets: Set<number>[] = [];
+
+  // Type filter: union (OR) across selected types
+  if (filters.types.length > 0) {
+    const typeResults = await Promise.all(
+      filters.types.map((t) => fetchPokemonIdsByType(t))
+    );
+    const union = new Set<number>();
+    for (const ids of typeResults) {
+      for (const id of ids) union.add(id);
+    }
+    sets.push(union);
+  }
+
+  // Generation filter: static ID range
+  if (filters.generation) {
+    const range = GENERATION_RANGES.find(([, , gen]) => gen === filters.generation);
+    if (range) {
+      const genSet = new Set<number>();
+      for (let i = range[0]; i <= range[1]; i++) genSet.add(i);
+      sets.push(genSet);
+    }
+  }
+
+  // Search filter: name contains term
+  if (filters.search) {
+    const term = filters.search.toLowerCase().trim();
+    const allNames = await fetchAllPokemonNames();
+    const searchSet = new Set<number>(
+      allNames
+        .filter((p) => p.name.includes(term) || p.id.toString().includes(term))
+        .map((p) => p.id)
+    );
+    sets.push(searchSet);
+  }
+
+  // Mega filter: only Pokemon that have mega evolutions
+  if (filters.hasMega) {
+    const megaSet = new Set<number>(Object.keys(MEGA_MAP).map(Number));
+    sets.push(megaSet);
+  }
+
+  // Intersect all sets (AND)
+  if (sets.length === 0) return [];
+
+  let result = sets[0];
+  for (let i = 1; i < sets.length; i++) {
+    const next = sets[i];
+    result = new Set([...result].filter((id) => next.has(id)));
+  }
+
+  return [...result].sort((a, b) => a - b);
+}
+
+/**
+ * Fetch full Pokemon details for a list of IDs (in parallel).
+ */
+export async function fetchPokemonByIds(ids: number[]): Promise<Pokemon[]> {
+  if (ids.length === 0) return [];
+  const results = await Promise.allSettled(
+    ids.map(async (id) => {
+      const res = await fetch(`${POKEAPI_BASE}/pokemon/${id}`);
+      if (!res.ok) throw new Error(`Failed to fetch pokemon ${id}`);
+      const data: PokeAPIPokemonResponse = await res.json();
+      return parsePokemonResponse(data);
+    })
+  );
+  return results
+    .filter((r): r is PromiseFulfilledResult<Pokemon> => r.status === "fulfilled")
+    .map((r) => r.value)
+    .sort((a, b) => a.id - b.id);
+}
+
 // Static generation ranges — avoids fetching species data for each Pokemon
 const GENERATION_RANGES: [number, number, string][] = [
   [1, 151, "Gen I"],
