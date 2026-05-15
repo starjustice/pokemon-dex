@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import ThemeProvider from "@/components/ThemeProvider";
+import SidebarProvider from "@/components/SidebarProvider";
+import AppSidebar from "@/components/AppSidebar";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -30,7 +32,12 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col font-sans">
-        <ThemeProvider>{children}</ThemeProvider>
+        <ThemeProvider>
+          <SidebarProvider>
+            <AppSidebar />
+            <main className="lg:ml-64">{children}</main>
+          </SidebarProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

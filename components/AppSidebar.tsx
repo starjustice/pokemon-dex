@@ -1,0 +1,173 @@
+"use client";
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
+import { useSidebar } from "./SidebarProvider";
+import ThemeToggle from "./ThemeToggle";
+
+const NAV_ITEMS = [
+  {
+    label: "Pokemon",
+    href: "/",
+    icon: (
+      <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+        <circle cx="12" cy="12" r="10" />
+        <circle cx="12" cy="12" r="3" />
+        <line x1="2" y1="12" x2="9" y2="12" />
+        <line x1="15" y1="12" x2="22" y2="12" />
+      </svg>
+    ),
+  },
+  {
+    label: "Skills",
+    href: "/skills",
+    icon: (
+      <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456z"
+        />
+      </svg>
+    ),
+  },
+] as const;
+
+function NavLinks({ onLinkClick }: { onLinkClick?: () => void }) {
+  const pathname = usePathname();
+
+  return (
+    <nav className="space-y-1 px-3">
+      {NAV_ITEMS.map((item) => {
+        const isActive =
+          item.href === "/"
+            ? pathname === "/"
+            : pathname.startsWith(item.href);
+
+        return (
+          <Link
+            key={item.href}
+            href={item.href}
+            onClick={onLinkClick}
+            className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
+              isActive
+                ? "bg-blue-50 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300"
+                : "text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-100"
+            }`}
+          >
+            <span className={isActive ? "text-blue-500 dark:text-blue-400" : "text-gray-400 dark:text-gray-500"}>
+              {item.icon}
+            </span>
+            {item.label}
+          </Link>
+        );
+      })}
+    </nav>
+  );
+}
+
+function SidebarContent({ onLinkClick }: { onLinkClick?: () => void }) {
+  return (
+    <div className="flex h-full flex-col">
+      {/* Logo / Title */}
+      <div className="px-6 py-5">
+        <Link href="/" onClick={onLinkClick} className="hover:opacity-80 transition-opacity">
+          <h1 className="text-xl font-extrabold tracking-tight text-gray-900 dark:text-white">
+            Pokemon Dex
+          </h1>
+        </Link>
+        <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+          Encyclopedia
+        </p>
+      </div>
+
+      {/* Nav Links */}
+      <div className="flex-1">
+        <NavLinks onLinkClick={onLinkClick} />
+      </div>
+
+      {/* Theme Toggle */}
+      <div className="border-t border-gray-200 px-6 py-4 dark:border-gray-700">
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Theme</span>
+          <ThemeToggle />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function AppSidebar() {
+  const { isDrawerOpen, closeDrawer } = useSidebar();
+  const [isClosing, setIsClosing] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  const pathname = usePathname();
+
+  // Auto-close drawer on route change
+  useEffect(() => {
+    closeDrawer();
+  }, [pathname, closeDrawer]);
+
+  // Manage drawer mount/unmount with animation
+  useEffect(() => {
+    if (isDrawerOpen) {
+      setMounted(true);
+      setIsClosing(false);
+      document.body.style.overflow = "hidden";
+    } else if (mounted) {
+      setIsClosing(true);
+      const timer = setTimeout(() => {
+        setMounted(false);
+        setIsClosing(false);
+      }, 200);
+      document.body.style.overflow = "";
+      return () => clearTimeout(timer);
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [isDrawerOpen, mounted]);
+
+  return (
+    <>
+      {/* Desktop Sidebar */}
+      <aside className="fixed left-0 top-0 z-30 hidden h-full w-64 border-r border-gray-200 bg-white lg:flex lg:flex-col dark:border-gray-700 dark:bg-gray-900">
+        <SidebarContent />
+      </aside>
+
+      {/* Mobile Drawer */}
+      {mounted && (
+        <div className="fixed inset-0 z-50 lg:hidden">
+          {/* Backdrop */}
+          <div
+            className={`absolute inset-0 bg-black/50 transition-opacity duration-300 ${
+              isClosing ? "opacity-0" : "opacity-100"
+            }`}
+            onClick={closeDrawer}
+          />
+
+          {/* Drawer Panel */}
+          <aside
+            className={`absolute left-0 top-0 h-full w-64 bg-white shadow-xl dark:bg-gray-900 ${
+              isClosing ? "animate-drawerOut" : "animate-drawerIn"
+            }`}
+          >
+            {/* Close button */}
+            <button
+              onClick={closeDrawer}
+              className="absolute right-3 top-4 rounded-lg p-1.5 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800"
+              aria-label="Close menu"
+            >
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+
+            <SidebarContent onLinkClick={closeDrawer} />
+          </aside>
+        </div>
+      )}
+    </>
+  );
+}

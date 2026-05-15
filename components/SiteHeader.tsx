@@ -1,5 +1,5 @@
 import Link from "next/link";
-import ThemeToggle from "@/components/ThemeToggle";
+import MenuButton from "@/components/MenuButton";
 
 interface SiteHeaderProps {
   subtitle?: string;
@@ -9,9 +9,10 @@ interface SiteHeaderProps {
 
 export default function SiteHeader({ subtitle, backHref, backLabel }: SiteHeaderProps) {
   return (
-    <header className="mb-8 flex items-start justify-between">
-      <div>
-        <div className="flex items-center gap-3">
+    <header className="mb-8">
+      <div className="flex items-start gap-3">
+        <MenuButton />
+        <div className="flex-1">
           {backHref && (
             <Link
               href={backHref}
@@ -23,19 +24,18 @@ export default function SiteHeader({ subtitle, backHref, backLabel }: SiteHeader
               {backLabel ?? "Back"}
             </Link>
           )}
+          <Link href="/" scroll={false} className="hover:opacity-80 transition-opacity">
+            <h1 className="text-4xl font-extrabold tracking-tight text-gray-900 dark:text-white">
+              Pokemon Dex
+            </h1>
+          </Link>
+          {subtitle && (
+            <p className="mt-2 text-lg text-gray-500 dark:text-gray-400">
+              {subtitle}
+            </p>
+          )}
         </div>
-        <Link href="/" scroll={false} className="hover:opacity-80 transition-opacity">
-          <h1 className="text-4xl font-extrabold tracking-tight text-gray-900 dark:text-white">
-            Pokemon Dex
-          </h1>
-        </Link>
-        {subtitle && (
-          <p className="mt-2 text-lg text-gray-500 dark:text-gray-400">
-            {subtitle}
-          </p>
-        )}
       </div>
-      <ThemeToggle />
     </header>
   );
 }
